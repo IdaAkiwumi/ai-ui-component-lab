@@ -1,4 +1,5 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
+import { getGuestUsage, incrementGuestUsage } from './guestLimit'
 import PromptPanel from './components/PromptPanel'
 import PreviewPanel from './components/PreviewPanel'
 import SessionHistory from './components/SessionHistory'
@@ -19,22 +20,7 @@ const CHARS_PER_TOKEN = 4
 
 const GUEST_DAILY_LIMIT = 10 // 10 guest requests per day. generous enough to explore, tight enough to protect your quota
 
-function getGuestUsage() {
-  try {
-    const today = new Date().toDateString()
-    const stored = JSON.parse(localStorage.getItem('cl_usage') || '{}')
-    return stored.date === today ? stored : { count: 0, date: today }
-  } catch {
-    return { count: 0, date: new Date().toDateString() }
-  }
-}
 
-function incrementGuestUsage() {
-  const usage = getGuestUsage()
-  const updated = { date: usage.date, count: usage.count + 1 }
-  try { localStorage.setItem('cl_usage', JSON.stringify(updated)) } catch {}
-  return updated
-}
 
 function checkDevMode() {
   try { return localStorage.getItem('cl_dev') === '1' } catch { return false }
@@ -604,7 +590,14 @@ function App() {
   const [history, setHistory]             = useState([])
   const [activeModel, setActiveModel]     = useState(MODELS[0])
   const [devMode, setDevMode]             = useState(checkDevMode)
-  const [guestUsage, setGuestUsage]       = useState(getGuestUsage)
+const [guestUsage, setGuestUsage]       = useState({ count: 0, date: new Date().toDateString() })
+
+// Load real usage from Firebase on mount
+useEffect(() => {
+  if (!devMode) {
+    getGuestUsage().then(setGuestUsage)
+  }
+}, [devMode])
 
   // Hidden dev-mode unlock: click the title 5 times within 2 seconds
   const titleClickCount = useRef(0)
@@ -632,19 +625,19 @@ function App() {
   }
 
   // Called once per successful generation to tick the guest counter
-  const recordGeneration = () => {
-    if (devMode) return
-    const updated = incrementGuestUsage()
-    setGuestUsage(updated)
-  }
+  const recordGeneration = async () => {
+  if (devMode) return
+  const updated = await incrementGuestUsage()
+  if (updated) setGuestUsage(updated)
+}
 
   const generateUI = async () => {
     if (!prompt.trim()) return
 
     // ── Guest rate-limit gate ──────────────────────────────────────────────
     if (!devMode) {
-      const usage = getGuestUsage()
-      if (usage.count >= GUEST_DAILY_LIMIT) {
+  const usage = await getGuestUsage()
+  if (usage.count >= GUEST_DAILY_LIMIT) {
         setError(
           `You've used all ${GUEST_DAILY_LIMIT} demo generations for today. ` +
           `Resets at midnight — or feel free to reach out if you'd like to see more!`
@@ -678,7 +671,7 @@ function App() {
           },
           ...prev
         ])
-        recordGeneration()
+        await recordGeneration()
         setLoading(false)
         return
       } catch (err) {
