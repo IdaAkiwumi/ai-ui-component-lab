@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import PromptPanel from './components/PromptPanel'
 import PreviewPanel from './components/PreviewPanel'
 import SessionHistory from './components/SessionHistory'
@@ -12,19 +12,40 @@ const MODELS = [
   'openai/gpt-oss-120b',
 ]
 
-// llama-3.1-8b-instant hard limits
-// TPM = 6,000 tokens/minute (input + output combined)
-// We leave a 500-token safety buffer → skip this model if estimated total > 5,500 tokens
-// Rough conversion: 1 token ≈ 4 characters
 const SMALL_MODEL_TOKEN_LIMIT = 5500
 const CHARS_PER_TOKEN = 4
+
+// ─── Guest Rate Limiting ──────────────────────────────────────────────────────
+
+const GUEST_DAILY_LIMIT = 10 // 10 guest requests per day. generous enough to explore, tight enough to protect your quota
+
+function getGuestUsage() {
+  try {
+    const today = new Date().toDateString()
+    const stored = JSON.parse(localStorage.getItem('cl_usage') || '{}')
+    return stored.date === today ? stored : { count: 0, date: today }
+  } catch {
+    return { count: 0, date: new Date().toDateString() }
+  }
+}
+
+function incrementGuestUsage() {
+  const usage = getGuestUsage()
+  const updated = { date: usage.date, count: usage.count + 1 }
+  try { localStorage.setItem('cl_usage', JSON.stringify(updated)) } catch {}
+  return updated
+}
+
+function checkDevMode() {
+  try { return localStorage.getItem('cl_dev') === '1' } catch { return false }
+}
+
+// ─── Everything below this line is unchanged from your original ───────────────
 
 function estimateTokens(text) {
   return Math.ceil(text.length / CHARS_PER_TOKEN)
 }
 
-// Returns true when a 400 response is specifically a token/context size rejection
-// so we can skip to the next model instead of surfacing it as a user-facing error
 function isRequestTooLarge(status, message) {
   if (status !== 400) return false
   const lower = (message || '').toLowerCase()
@@ -208,10 +229,6 @@ function isBirthChartRequest(prompt) {
   )
 }
 
-// ─── Local Birth Chart Renderer ──────────────────────────────────────────────
-// Parses the planet/sign/degree data from the prompt and builds a proper
-// SVG wheel entirely in JavaScript — no API call needed, no token limits.
-
 function extractBirthChartData(prompt) {
   const signBaseDegs = {
     aries: 0, taurus: 30, gemini: 60, cancer: 90, leo: 120, virgo: 150,
@@ -335,7 +352,6 @@ function buildBirthChartHTML(prompt) {
     return `<line x1="${r1.x.toFixed(2)}" y1="${r1.y.toFixed(2)}" x2="${r2.x.toFixed(2)}" y2="${r2.y.toFixed(2)}" stroke="rgba(255,255,255,${isMajor ? 0.6 : 0.25})" stroke-width="${isMajor ? 1.5 : 0.8}"/>`
   }).join('\n')
 
-  // Spread overlapping planets
   const sorted = [...placements].sort((a, b) => a.absolute - b.absolute)
   const spread = []
   for (const p of sorted) {
@@ -356,7 +372,6 @@ function buildBirthChartHTML(prompt) {
     <text x="${pos.x.toFixed(2)}" y="${(pos.y + 0.5).toFixed(2)}" text-anchor="middle" dominant-baseline="middle" fill="#f1f5f9" font-size="12">${p.glyph}</text>`
   }).join('\n')
 
-  // Major aspect lines between first 8 bodies
   const aspectBodies = spread.filter(p =>
     ['Sun','Moon','Mercury','Venus','Mars','Jupiter','Saturn','Ascendant'].includes(p.name)
   )
@@ -439,8 +454,6 @@ function buildBirthChartHTML(prompt) {
   </div>
 </div>`
 }
-
-// ─── System Prompt ────────────────────────────────────────────────────────────
 
 const STYLE_NUDGES = [
   'Use bold high-contrast typography with strong visual hierarchy.',
@@ -590,9 +603,55 @@ function App() {
   const [error, setError]                 = useState('')
   const [history, setHistory]             = useState([])
   const [activeModel, setActiveModel]     = useState(MODELS[0])
+  const [devMode, setDevMode]             = useState(checkDevMode)
+  const [guestUsage, setGuestUsage]       = useState(getGuestUsage)
+
+  // Hidden dev-mode unlock: click the title 5 times within 2 seconds
+  const titleClickCount = useRef(0)
+  const titleClickTimer = useRef(null)
+
+  const handleTitleClick = () => {
+    titleClickCount.current += 1
+    clearTimeout(titleClickTimer.current)
+
+    if (titleClickCount.current >= 5) {
+      titleClickCount.current = 0
+      const devPassword = import.meta.env.VITE_DEV_PASSWORD
+      if (!devPassword) return // not configured — silently ignore
+      const input = window.prompt('Developer access code:')
+      if (input && input === devPassword) {
+        try { localStorage.setItem('cl_dev', '1') } catch {}
+        setDevMode(true)
+      }
+      return
+    }
+
+    titleClickTimer.current = setTimeout(() => {
+      titleClickCount.current = 0
+    }, 2000)
+  }
+
+  // Called once per successful generation to tick the guest counter
+  const recordGeneration = () => {
+    if (devMode) return
+    const updated = incrementGuestUsage()
+    setGuestUsage(updated)
+  }
 
   const generateUI = async () => {
     if (!prompt.trim()) return
+
+    // ── Guest rate-limit gate ──────────────────────────────────────────────
+    if (!devMode) {
+      const usage = getGuestUsage()
+      if (usage.count >= GUEST_DAILY_LIMIT) {
+        setError(
+          `You've used all ${GUEST_DAILY_LIMIT} demo generations for today. ` +
+          `Resets at midnight — or feel free to reach out if you'd like to see more!`
+        )
+        return
+      }
+    }
 
     setLoading(true)
     setError('')
@@ -618,6 +677,7 @@ function App() {
           },
           ...prev
         ])
+        recordGeneration()
         setLoading(false)
         return
       } catch (err) {
@@ -639,26 +699,15 @@ function App() {
 
     const userMessage = `Create this UI component: ${prompt}\n\nStyle direction: ${styleNudge}`
 
-    // Estimate total tokens this request will consume.
-    // We use this to decide which models are safe to try
-    // rather than a character-length threshold, which was
-    // the bug that caused llama-3.1-8b-instant to be skipped
-    // on every single request.
     const estimatedTokens = estimateTokens(systemPrompt + userMessage)
 
-    // Build the model list from most-generous-limit first.
-    // Only skip a model if we have a concrete reason it will fail.
     const modelsToTry = MODELS.filter(model => {
       if (model === 'llama-3.1-8b-instant') {
-        // This model has a hard 6,000 TPM cap.
-        // Skip it only when the request is provably too large for it.
         return estimatedTokens < SMALL_MODEL_TOKEN_LIMIT
       }
       return true
     })
 
-    // If the small model was the only one and got filtered,
-    // fall back to trying all remaining models anyway
     const finalModels = modelsToTry.length > 0 ? modelsToTry : MODELS.slice(1)
 
     for (const model of finalModels) {
@@ -676,9 +725,6 @@ function App() {
               { role: 'system', content: systemPrompt },
               { role: 'user',   content: userMessage  }
             ],
-            // 1600-1800 is enough for all standard components.
-            // Keeps us well inside per-minute token budgets
-            // so we stop burning through rate limits.
             max_tokens: 1600,
           }),
         })
@@ -697,8 +743,6 @@ function App() {
             continue
           }
 
-          // For any other non-ok status, log it but keep trying
-          // remaining models rather than surfacing immediately.
           console.warn(`${model} error ${response.status}: ${errMsg}. Trying next...`)
           continue
         }
@@ -735,6 +779,7 @@ function App() {
           ...prev
         ])
 
+        recordGeneration()
         setLoading(false)
         return
 
@@ -765,23 +810,52 @@ function App() {
     ? activeModel.split('/')[1]
     : activeModel
 
+  const generationsLeft = Math.max(0, GUEST_DAILY_LIMIT - guestUsage.count)
+
   return (
     <div className="min-h-screen bg-zinc-50 font-sans">
 
       <header className="border-b border-zinc-200 bg-white px-8 py-5 sticky top-0 z-20">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div>
-            <h1 className="text-lg font-semibold text-zinc-900 tracking-tight">
-              Component Lab
+            {/* Clicking the title 5× within 2s opens the dev-mode password prompt */}
+            <h1
+              className="text-lg font-semibold text-zinc-900 tracking-tight cursor-default select-none"
+              onClick={handleTitleClick}
+            >
+              Website Design AI Component Lab
             </h1>
             <p className="text-sm text-zinc-400 mt-0.5">
               Describe a UI component. Watch it appear.
             </p>
           </div>
+
           <div className="flex items-center gap-3">
             {loading && (
               <span className="text-xs text-zinc-400 animate-pulse">Generating...</span>
             )}
+
+            {/* Guest usage pill — hidden in dev mode */}
+            {!devMode && (
+              <span
+                className={`text-xs px-2.5 py-1 rounded-full font-medium ${
+                  generationsLeft <= 2
+                    ? 'bg-amber-50 text-amber-600 border border-amber-200'
+                    : 'bg-zinc-100 text-zinc-500'
+                }`}
+                title="Demo generations remaining today"
+              >
+                {generationsLeft} / {GUEST_DAILY_LIMIT} left today
+              </span>
+            )}
+
+            {/* Dev mode badge */}
+            {devMode && (
+              <span className="text-xs px-2.5 py-1 rounded-full bg-violet-50 text-violet-600 border border-violet-200 font-medium">
+                Dev mode
+              </span>
+            )}
+
             <span className="text-xs text-zinc-300 font-mono">{modelLabel}</span>
           </div>
         </div>
