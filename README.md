@@ -147,7 +147,7 @@ src/
 └── workflows/
     └── deploy.yml           # CI/CD — builds and deploys on every push to main 
 
-
+```
 
 
 ### 🔒 Security Notes
