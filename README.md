@@ -145,42 +145,32 @@ src/
 │   └── SessionHistory.jsx   # Bottom strip — session history with restore
 .github/
 └── workflows/
-    └── deploy.yml           # CI/CD — builds and deploys on every push to main
-🔒 Security Notes
-The Groq API key is bundled client-side (unavoidable for a purely static app).
-Rate limiting + daily caps prevent meaningful abuse.
-Firebase security rules enforce server-side count validation —
-client code cannot be modified to bypass the limit.
-The dev-mode backdoor requires a password set only in environment variables,
-not in source code.
-🗺️ Roadmap
- Export generated components as downloadable .html files
- Prompt history persistence across sessions via Firebase
- Variation mode — generate 3 alternatives side by side
- Custom color/style presets per user session
- Component categories and gallery view
-💡 For Hiring Managers & Recruiters
+    └── deploy.yml           # CI/CD — builds and deploys on every push to main 
+
+
+
+
+### 🔒 Security Notes
+* Rate limiting + daily caps prevent API abuse.
+* Firebase security rules enforce server-side count validation.
+* The dev-mode backdoor requires a password set in environment variables.
+
+### 🗺️ Roadmap
+* [ ] Export generated components as downloadable .html files
+* [ ] Prompt history persistence via Firebase Auth
+* [ ] Variation mode — generate 3 alternatives side by side
+* [ ] Custom color/style presets per session
+
+### 💡 For Hiring Managers
 This project demonstrates:
-
-API orchestration — multi-provider LLM cascade with graceful fallback logic
-Security thinking — server-side validation rules, fingerprinting, abuse prevention without user auth
-React architecture — clean separation of concerns across components, custom hooks pattern
-CI/CD — GitHub Actions workflow that injects secrets and deploys automatically
-Prompt engineering — structured system prompts with conditional sections based on request classification
-SVG/Canvas rendering — fully custom birth chart renderer without any chart library
-
+* **API Orchestration:** Multi-provider fallback logic.
+* **Security Thinking:** Fingerprinting and server-side validation.
+* **React Architecture:** Clean separation of concerns and custom hooks.
+* **CI/CD:** Automated GitHub Actions for secret injection and deployment.
 
 ### ☕ Support This Project
-If UI Component Lab saved you time prototyping, helped you land a client,
-or just sparked an idea — consider supporting continued development. Every contribution helps maintain API costs and fund new features. Thank you.:
 * [Sponsor on GitHub](https://github.com/sponsors/IdaAkiwumi)
 * [Donate via PayPal](https://www.paypal.com/paypalme/iakiwumi)
 
----
-**Developed by Ida Akiwumi**
-*Creative Technologist | Frontend Engineer | AI Integration Specialist
-
-
-
-
-Turning natural language into production UI — one component at a time.
+Developed by Ida Akiwumi
+Creative Technologist | Frontend Engineer | AI Integration Specialist
