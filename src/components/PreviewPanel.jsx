@@ -80,14 +80,10 @@ function splitCode(raw) {
 }
 
 export function buildIframeDoc(code, isThumb = false) {
-  // Always clean before rendering — prevents markdown fences in downloads too
   const cleaned = cleanCode(code)
   const fixed   = fixLinks(cleaned)
   const isGlass = isGlassComponent(cleaned)
 
-  // Glass: body has zero padding/background so the AI's gradient fills everything
-  // min-width:100% ensures the gradient wrapper covers the full iframe width
-  // even when horizontal card rows overflow past the viewport
   const bodyStyle = isGlass
     ? `
         margin: 0;
@@ -139,14 +135,34 @@ export function buildIframeDoc(code, isThumb = false) {
 
       body { ${bodyStyle} }
 
+      /* Glass wrapper: align to top so tall content scrolls from the start
+         instead of being clipped at the top when taller than the viewport */
+      .g-wrap {
+        align-items: flex-start !important;
+        padding-top: 48px !important;
+        padding-bottom: 48px !important;
+      }
+
       h1,h2,h3,h4,h5,h6,p,span,li,td,th {
         max-width: 100%;
         word-break: break-word;
         overflow-wrap: break-word;
       }
 
-      /* Price elements must never split mid-number
-         This overrides the global word-break:break-word */
+      /* Buttons must NEVER wrap text regardless of global word-break */
+      button,
+      input[type="button"],
+      input[type="submit"],
+      a.g-btn,
+      a.btn,
+      .g-btn,
+      .btn {
+        white-space: nowrap !important;
+        word-break: normal !important;
+        overflow-wrap: normal !important;
+      }
+
+      /* Price elements must never split mid-number */
       .price-row,
       .price-amount,
       .price-currency,
@@ -158,6 +174,33 @@ export function buildIframeDoc(code, isThumb = false) {
         white-space: nowrap !important;
         word-break: normal !important;
         overflow-wrap: normal !important;
+      }
+
+      /* Stars must always render as a horizontal row
+         This overrides any model that stacks them vertically */
+      .star-row,
+      .stars,
+      .rating,
+      [class*="star-row"],
+      [class*="star-container"],
+      [class*="star-rating"] {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        align-items: center !important;
+        gap: 3px !important;
+      }
+
+      /* Each individual star must be inline, not block */
+      .star,
+      .star-filled,
+      .star-empty,
+      [class*="star-icon"],
+      [class*="star-item"] {
+        display: inline-block !important;
+        font-size: 20px !important;
+        line-height: 1 !important;
+        word-break: normal !important;
       }
 
       ${isGlass ? `
@@ -256,7 +299,7 @@ function PreviewPanel({ generatedCode, loading, error }) {
               className="text-xs text-zinc-400 hover:text-zinc-700 px-2 py-1.5
                          rounded-lg hover:bg-zinc-100 transition-all duration-150 font-medium"
             >
-              {downloaded ? '✓ Saved' : '↓ HTML'}
+              {downloaded ? '✓ Saved' : 'DOWNLOAD HTML FILE'}
             </button>
 
             <div className="flex items-center gap-1 bg-zinc-100 rounded-lg p-1">

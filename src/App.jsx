@@ -32,21 +32,57 @@ export function sanitizeOutput(code, prompt) {
   if (!code) return code
   const lower = prompt.toLowerCase()
 
-  // Remove star rating characters if the user never asked for them
   const wantsStars = (
     lower.includes('star') ||
     lower.includes('rating') ||
     lower.includes('review') ||
     lower.includes('score')
   )
+
   if (!wantsStars) {
+    // Remove all star characters when not requested
     code = code.replace(/[★☆⭐🌟]/g, '')
-    // Clean up any spans that are now empty after star removal
     code = code.replace(/<span[^>]*>\s*<\/span>/g, '')
+  } else {
+    // Stars WERE requested — fix common model mistakes
+
+    // Fix 1: Replace ^ chevron characters that models use instead of ★
+    // Only inside elements that look like star containers to avoid breaking JS/CSS
+    code = code.replace(
+      /(<(?:span|div|i)[^>]*class="[^"]*star[^"]*"[^>]*>)\s*\^\s*(<\/)/gi,
+      '\$1★\$2'
+    )
+
+    // Fix 2: If the model used CSS ::before with chevron content, 
+    // replace the content value with the actual star character
+    code = code.replace(
+      /content:\s*["'][\^›»❯>]+["']/gi,
+      'content: "★"'
+    )
+
+    // Fix 3: Ensure any .star-row or .stars container is horizontal
+    // Inject a style block fix after any existing star styles
+    if (code.includes('star-row') || code.includes('class="stars"')) {
+      const starFix = `<style>
+  .star-row, .stars, [class*="star-row"], [class*="star-container"] {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    gap: 3px !important;
+  }
+  .star, .star-filled, .star-empty, [class*="star-icon"] {
+    display: inline-block !important;
+    font-size: 20px !important;
+    line-height: 1 !important;
+  }
+</style>`
+      // Insert right before the first <div to ensure it loads early
+      code = code.replace(/(<div)/, `${starFix}\n\$1`)
+    }
   }
 
-  // Remove decorative emojis that the model adds to headings and feature lists
-  // unless the user explicitly asked for them
+  // Remove decorative emojis unless specifically requested
   const wantsEmoji = (
     lower.includes('emoji') ||
     lower.includes('icon') ||
@@ -56,7 +92,6 @@ export function sanitizeOutput(code, prompt) {
     lower.includes('badge')
   )
   if (!wantsEmoji) {
-    // Strip common decorative emojis models love to add to pricing cards etc.
     code = code.replace(/[🚀💎🔒⚡✨🎯🏆💡🔥👑🎨🛡️⚙️📊💰🌐]/gu, '')
   }
 
@@ -150,7 +185,7 @@ GLASSMORPHISM — FOLLOW EXACTLY:
 
 FOR A SINGLE GLASS CARD — use this EXACT structure, fill in the content:
 <style>
-  .g-wrap { background:${gradient}; min-height:100vh; width:max-content; min-width:100%; display:flex; align-items:center; justify-content:center; padding:48px; box-sizing:border-box; }
+        .g-wrap { background:${gradient}; min-height:100vh; width:max-content; min-width:100%; display:flex; align-items:flex-start; justify-content:center; padding:48px; box-sizing:border-box; }
   .g-card { backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.25); border-radius:24px; padding:48px; box-shadow:0 25px 50px rgba(0,0,0,0.3); width:100%; max-width:440px; }
   .g-title { font-size:22px; font-weight:700; color:white; margin:0 0 8px; }
   .g-sub { font-size:14px; color:rgba(255,255,255,0.65); margin:0 0 24px; }
@@ -171,7 +206,7 @@ FOR A SINGLE GLASS CARD — use this EXACT structure, fill in the content:
 
 FOR 2 OR MORE GLASS CARDS SIDE BY SIDE — use this EXACT structure:
 <style>
-  .g-wrap { background:${gradient}; min-height:100vh; width:max-content; min-width:100%; display:flex; align-items:center; justify-content:flex-start; padding:48px; box-sizing:border-box; }
+  .g-wrap { background:${gradient}; min-height:100vh; width:max-content; min-width:100%; display:flex; align-items:flex-start; justify-content:flex-start; padding:48px; box-sizing:border-box; }
   .g-row { display:flex; flex-direction:row; gap:24px; align-items:stretch; }
   .g-card { backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.25); border-radius:24px; padding:32px; box-shadow:0 25px 50px rgba(0,0,0,0.3); width:280px; flex-shrink:0; display:flex; flex-direction:column; }
   .g-title { font-size:18px; font-weight:700; color:white; margin:0 0 6px; }
@@ -218,11 +253,34 @@ CSS STRUCTURE — ALWAYS DO THIS:
 - This allows the tool to split code into separate CSS and HTML tabs.
 - Only use inline style="" for one-off values that have no reusable class.
 
-STARS — ABSOLUTE BAN:
-- NEVER output ★ ☆ ⭐ 🌟 or any star character or star SVG unless the prompt 
-  explicitly contains the word "star", "rating", or "review". 
-- This is enforced automatically after generation. Any stars found will be removed.
-- There are no exceptions to this rule.
+      STAR RATINGS — READ EVERY WORD:
+      - NEVER use CSS ::before or ::after pseudo-elements for stars.
+      - NEVER use SVG for stars.
+      - NEVER use ^ or › or > or any arrow/chevron character for stars.
+      - NEVER use separate block-level divs for individual stars.
+      - The ONLY allowed star characters are ★ (filled) and ☆ (empty).
+      - Stars must ALWAYS be in a single horizontal row, never stacked vertically.
+      - When stars are requested, use EXACTLY this pattern in your CSS and HTML:
+
+        In your <style> block:
+        .star-row { display:flex; flex-direction:row; flex-wrap:nowrap; align-items:center; gap:3px; margin:10px 0; }
+        .star { display:inline-block; font-size:22px; line-height:1; word-break:normal; }
+        .star.filled { color:#facc15; }
+        .star.empty { color:#d1d5db; }
+
+        In your HTML:
+        <div class="star-row">
+          <span class="star filled">★</span>
+          <span class="star filled">★</span>
+          <span class="star filled">★</span>
+          <span class="star filled">★</span>
+          <span class="star filled">★</span>
+        </div>
+
+      - Adjust filled vs empty spans for the requested rating (e.g. 4 stars = 4 filled + 1 empty).
+      - Do not wrap each star in its own div. Each star is a <span> only.
+      - This rule is enforced by post-processing. Violations will be corrected automatically.
+      - NEVER add stars unless the prompt explicitly contains "star", "rating", or "review".
 
 EMOJIS — STRICT BAN:
 - Do NOT add decorative emojis to headings, feature lists, card titles, or pricing tiers.
@@ -246,6 +304,14 @@ PRICE DISPLAY — CRITICAL, PREVENTS BROKEN LAYOUTS:
   .price-period { font-size:12px; white-space:nowrap; margin-left:3px; opacity:0.75; }
 - Maximum font-size for any price number is 28px. Never go larger.
 - Add white-space:nowrap to EVERY span inside a price row.
+
+BUTTONS:
+      - ALL buttons must have white-space:nowrap in their CSS class. No exceptions.
+      - ALL buttons must have enough horizontal padding so their label fits on one line.
+      - Minimum button padding: padding:10px 20px. Preferred: padding:12px 24px.
+      - For buttons inside narrow cards (width under 240px): use font-size:13px and padding:10px 16px.
+      - NEVER let a button label wrap to a second line.
+      - In your <style> block, every button class must include: white-space:nowrap; word-break:normal; overflow-wrap:normal;
 
 SIDE-BY-SIDE BUTTON GROUPS — REQUIRED:
 - When the user asks for buttons "next to each other", "side by side", or lists
