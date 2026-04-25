@@ -144,8 +144,7 @@ src/
 │   ├── PreviewPanel.jsx     # Right panel — live HTML preview in iframe
 │   └── SessionHistory.jsx   # Bottom strip — session history with restore
 .github/
-└── workflows/
-    └── deploy.yml           # CI/CD — builds and deploys on every push to main 
+
 
 ```
 
