@@ -166,7 +166,7 @@ This project demonstrates:
 * **API Orchestration:** Multi-provider fallback logic.
 * **Security Thinking:** Fingerprinting and server-side validation.
 * **React Architecture:** Clean separation of concerns and custom hooks.
-* **CI/CD:** Automated GitHub Actions for secret injection and deployment.
+
 
 ### ☕ Support This Project
 * [Sponsor on GitHub](https://github.com/sponsors/IdaAkiwumi)
