@@ -4,7 +4,7 @@ import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
    // Replace 'your-repo-name' with your actual GitHub repo name
-  base: '/ai-component-lab/',
+  base: '/ai-ui-component-lab/',
   plugins: [
     react(),
     tailwindcss(),
