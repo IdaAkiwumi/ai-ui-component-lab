@@ -817,7 +817,7 @@ useEffect(() => {
               className="text-lg font-semibold text-zinc-900 tracking-tight cursor-default select-none"
               onClick={handleTitleClick}
             >
-              Website Design AI Component Lab
+              Website UI Component Lab — AI Design Engine
             </h1>
             <p className="text-sm text-zinc-400 mt-0.5">
               Describe a UI component. Watch it appear.
