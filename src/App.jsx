@@ -648,6 +648,7 @@ function App() {
         setError(
           `You've used all ${GUEST_DAILY_LIMIT} demo generations for today. ` +
           `Resets at midnight — or feel free to reach out if you'd like to see more!`
+          `If you're tempted to bypass this limit, consider that it's in place to prevent abuse and ensure fair access for everyone. Thanks for understanding!`
         )
         return
       }
