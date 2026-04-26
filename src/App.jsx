@@ -30,6 +30,103 @@ function isRequestTooLarge(status, message) {
     lower.includes('max_tokens') || (lower.includes('token') && lower.includes('limit'))
 }
 
+
+function Footer() {
+  return (
+    <footer style={{
+      width: '100%',
+      padding: '24px 24px',
+      textAlign: 'center',
+      borderTop: '1px solid #e4e4e7',
+      marginTop: '32px',
+      backgroundColor: '#ffffff',
+      fontFamily: 'sans-serif',
+    }}>
+      <p style={{
+        margin: '0 0 6px',
+        fontSize: '13px',
+        fontWeight: '700',
+        color: '#18181b',
+        letterSpacing: '0.01em',
+      }}>
+        Built by{' '}
+        <a
+          href="https://idaakiwumi.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            color: '#0a66c2',
+            textDecoration: 'none',
+          }}
+          onMouseEnter={e => e.target.style.textDecoration = 'underline'}
+          onMouseLeave={e => e.target.style.textDecoration = 'none'}
+        >
+          Ida Akiwumi
+        </a>
+      </p>
+      <p style={{
+        margin: '0 0 4px',
+        fontSize: '12px',
+        color: '#18181b',
+        fontWeight: '600',
+        lineHeight: '1.7',
+        maxWidth: '580px',
+        marginLeft: 'auto',
+        marginRight: 'auto',
+      }}>
+        Creative Technologist · AI Frontend Engineer · Design Engineer
+      </p>
+      <p style={{
+        margin: '0 0 14px',
+        fontSize: '12px',
+        color: '#52525b',
+        lineHeight: '1.7',
+        maxWidth: '580px',
+        marginLeft: 'auto',
+        marginRight: 'auto',
+      }}>
+        Specializing in AI integration and production-grade React — open to roles in{' '}
+        <span style={{ color: '#18181b', fontWeight: '600' }}>
+          healthcare tech, entertainment, EdTech, and media
+        </span>
+        .
+      </p>
+      <a
+        href="https://www.linkedin.com/in/idaa11"
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '8px',
+          backgroundColor: '#0a66c2',
+          color: '#ffffff',
+          fontSize: '12px',
+          fontWeight: '600',
+          padding: '8px 18px',
+          borderRadius: '20px',
+          textDecoration: 'none',
+          letterSpacing: '0.02em',
+        }}
+        onMouseEnter={e => {
+          e.currentTarget.style.backgroundColor = '#004182'
+          e.currentTarget.style.boxShadow = '0 2px 8px rgba(10,102,194,0.25)'
+        }}
+        onMouseLeave={e => {
+          e.currentTarget.style.backgroundColor = '#0a66c2'
+          e.currentTarget.style.boxShadow = 'none'
+        }}
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg">
+          <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+        </svg>
+        Let's connect on LinkedIn
+      </a>
+    </footer>
+  )
+}
+
+
 export function cleanCode(raw) {
   if (!raw) return ''
   return raw.trim()
@@ -58,6 +155,13 @@ function isValidHTML(code) {
   const t = code.trim()
   return t.startsWith('<') && (t.includes('<div') || t.includes('<style') || t.includes('<section') || t.includes('<article') || t.includes('<main') || t.includes('<svg'))
 }
+
+
+
+
+
+
+
 
 const RANDOM_GRADIENTS = [
   'linear-gradient(135deg,#6366f1 0%,#a855f7 50%,#ec4899 100%)',
@@ -1342,6 +1446,8 @@ function App() {
           <div className="py-8"><SessionHistory history={history} onRestore={handleRestore} /></div>
         </>
       )}
+
+      <Footer />
     </div>
   )
 }

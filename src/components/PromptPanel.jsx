@@ -70,8 +70,8 @@ function PromptPanel({ prompt, setPrompt, onGenerate, onClear, loading }) {
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={`Describe your component in as much detail as you want.\n\nYou can include:\n- Layout: "three horizontal cards"\n- Size: "compact", "wide 600px", "full-width"\n- Colors: "green gradient", "dark background"\n- Interactions: "button that shows text when clicked"\n- Content: specific names, labels, data to display`}
-            rows={9}
+            placeholder={`You can include:\n- Layout: "three horizontal cards"\n- Size: "compact", "wide 600px", "full-width"\n- Colors: "green gradient", "dark background"\n- Interactions: "button that shows text when clicked"\n- Content: specific names, labels, data to display`}
+            rows={6}
             maxLength={MAX_CHARS}
             className={`w-full resize-none rounded-xl border px-4 py-3
                        text-sm text-zinc-800 placeholder:text-zinc-400
@@ -103,12 +103,7 @@ function PromptPanel({ prompt, setPrompt, onGenerate, onClear, loading }) {
           </p>
         )}
 
-        {/* Hint about size syntax so users know it works */}
-        {!isOverLimit && charCount === 0 && (
-          <p className="text-xs text-zinc-400 mt-1.5">
-            Tip: you can specify sizes — "compact card", "wide 500px", "small avatar"
-          </p>
-        )}
+       
       </div>
 
       {/* EXAMPLE PROMPTS */}
