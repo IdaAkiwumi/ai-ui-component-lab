@@ -253,31 +253,53 @@ const OUTER_BODIES = new Set(['Lilith','Ceres','Pallas Athena','Juno','Vesta','P
 
 // Parse explicit color keywords from prompt - checked FIRST before random
 function parseExplicitColors(prompt) {
-  const lower = prompt.toLowerCase().replace(/\s+/g, ' ').trim()
+  // ─── FIX: strip all zodiac sign names and planet names BEFORE color scan ──
+  // This prevents 'sage' inside 'Sagittarius', 'rose' inside 'scorpio' etc
+  // from triggering false color matches
+  const stripped = prompt
+    .toLowerCase()
+    .replace(/\b(aries|taurus|gemini|cancer|leo|virgo|libra|scorpio|sagittarius|capricorn|aquarius|pisces)\b/g, '')
+    .replace(/\b(sun|moon|mercury|venus|mars|jupiter|saturn|uranus|neptune|pluto|chiron|lilith|ceres|juno|vesta|pholus|ascendant|midheaven|north node|south node)\b/g, '')
+    .replace(/\b(conjunction|sextile|square|trine|opposition|natal|birth|chart|wheel|house|rising|astrological|placidus|retrograde)\b/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+
   const found = []
 
+  // ─── FIX: use word-boundary aware matching for short color words ──────────
+  // 'red', 'blue', 'gold' etc must be standalone words not substrings
   const colorKeywords = [
-    { keys: ['red','crimson','scarlet','ruby','rose red'], id: 'red' },
-    { keys: ['blue','cobalt','royal blue','sapphire','navy blue','midnight blue','azure','cerulean'], id: 'blue' },
-    { keys: ['navy','indigo'], id: 'navy' },
-    { keys: ['green','emerald','forest','lime','jade','olive'], id: 'green' },
-    { keys: ['sage','sage green'], id: 'sage' },
-    { keys: ['purple','violet','lavender','amethyst','plum'], id: 'purple' },
-    { keys: ['gold','amber','mustard','honey'], id: 'gold' },
-    { keys: ['orange','coral','peach','terracotta'], id: 'orange' },
-    { keys: ['pink','magenta','fuchsia','rose'], id: 'pink' },
-    { keys: ['teal','turquoise','aqua','seafoam'], id: 'teal' },
-    { keys: ['cyan','electric blue','ice'], id: 'cyan' },
-    { keys: ['black','midnight','obsidian','onyx','noir'], id: 'black' },
-    { keys: ['white','ivory','cream','pearl','parchment','light','minimal'], id: 'white' },
-    { keys: ['warm','vintage','sepia','bronze','copper'], id: 'warm' },
+    { keys: ['\\bred\\b','crimson','scarlet','ruby'], id: 'red' },
+    { keys: ['\\bblue\\b','cobalt','royal blue','sapphire','navy blue','midnight blue','azure','cerulean'], id: 'blue' },
+    { keys: ['\\bnavy\\b','indigo'], id: 'navy' },
+    { keys: ['\\bgreen\\b','emerald','forest green','lime green','jade','olive green'], id: 'green' },
+    { keys: ['\\bsage\\b','sage green'], id: 'sage' },
+    { keys: ['\\bpurple\\b','violet','lavender','amethyst','plum'], id: 'purple' },
+    { keys: ['\\bgold\\b','\\bamber\\b','mustard','honey'], id: 'gold' },
+    { keys: ['\\borange\\b','\\bcoral\\b','\\bpeach\\b','terracotta'], id: 'orange' },
+    { keys: ['\\bpink\\b','magenta','fuchsia'], id: 'pink' },
+    { keys: ['\\bteal\\b','turquoise','aqua','seafoam'], id: 'teal' },
+    { keys: ['\\bcyan\\b','ice blue'], id: 'cyan' },
+    { keys: ['\\bblack\\b','obsidian','onyx','noir','dark background','black background'], id: 'black' },
+    { keys: ['\\bwhite\\b','ivory','cream background','white background','light background','minimal','\\blight\\b'], id: 'white' },
+    { keys: ['\\bwarm\\b','vintage','sepia','bronze','copper'], id: 'warm' },
     { keys: ['cosmic','galaxy','space','nebula','stellar'], id: 'cosmic' },
-    { keys: ['monochrome','mono','grayscale','grey','gray'], id: 'mono' },
-    { keys: ['neon','electric','glow','vivid','bright'], id: 'neon' },
+    { keys: ['monochrome','grayscale','\\bgrey\\b','\\bgray\\b'], id: 'mono' },
+    { keys: ['\\bneon\\b','electric','glow vivid','\\bbright\\b'], id: 'neon' },
+    { keys: ['\\brose\\b','rose gold'], id: 'pink' },
+    { keys: ['\\bmidnight\\b'], id: 'navy' },
   ]
 
   for (const { keys, id } of colorKeywords) {
-    if (keys.some(k => lower.includes(k))) found.push(id)
+    if (found.includes(id)) continue
+    const matched = keys.some(k => {
+      if (k.startsWith('\\b')) {
+        // word boundary check
+        return new RegExp(k).test(stripped)
+      }
+      return stripped.includes(k)
+    })
+    if (matched) found.push(id)
   }
   return found
 }
