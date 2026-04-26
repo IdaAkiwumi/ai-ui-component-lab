@@ -67,42 +67,19 @@ No account required. Works on any device.
 
 ### 🧠 Architecture Highlights
 
-#### Multi-Model Cascade
+**Multi-Model Cascade** — Prompts are routed through up to six Groq-hosted LLMs in priority order.
+The 8B model is skipped for large prompts; failed or rate-limited calls fall through automatically
+until the first valid HTML response is returned and sanitized for preview.
 
-User Prompt → Token Estimation → Model Selection
-↓
-Groq API → Model 1 (fastest fit)
-↓ if rate limited or invalid HTML
-Model 2 → Model 3 → ... → Model 6
-↓ first valid HTML response
-Output Sanitization → Live Preview
+**Fingerprint-Keyed Rate Limiting** — FingerprintJS hashes device signals (GPU, screen, timezone,
+fonts) into a key that maps to a Firebase Realtime DB counter. The daily cap is enforced by a
+Firebase security rule — not client logic — so incognito mode, cookie clearing, and direct REST
+calls are all blocked at the server.
 
-text
-
-The system intelligently skips the 8B model for large prompts (estimated > 5,500 tokens) 
-and falls through the cascade automatically on rate limits — users rarely notice a failed model.
-
-#### Fingerprint-Keyed Firebase Rate Limiting
-Page Load → FingerprintJS hashes GPU + screen + timezone + fonts
-↓
-Firebase Realtime DB lookup: cl_usage/{fingerprint}
-↓
-{ count: 3, date: "Mon Jun 09 2025" }
-↓ on generation
-Atomic write with .validate rule — server rejects count > 15
-
-text
-The Firebase security rule is the real lock — even a direct REST API call 
-cannot write a count above the limit, so bypassing the client code does nothing.
-
-#### Smart Prompt Classification
-Before any API call, the prompt is classified across five dimensions:
-- **Glass request** → injects full glassmorphism CSS template + gradient selection
-- **Visualization request** → activates SVG chart instructions
-- **Image request** → injects Picsum photo URL rules
-- **Birth chart request** → bypasses API entirely, renders locally via custom SVG engine
-- **Star/emoji request** → controls sanitization pass to prevent phantom symbols
-
+**Smart Prompt Classification** — Before any API call, the prompt is scored across five dimensions
+(glassmorphism, visualization, image, birth chart, star/emoji) to select the right system prompt,
+CSS template, and sanitization pass. Birth chart requests bypass the API entirely and render locally
+via a custom inline SVG engine.
 ---
 
 ### 🖥️ Local Development
