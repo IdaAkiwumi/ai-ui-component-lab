@@ -752,6 +752,11 @@ function buildBirthChartHTML(prompt) {
   const showHouseNums = prompt.toLowerCase().includes('house number') ||
     prompt.toLowerCase().includes('numbered') || Math.random()>0.28
 
+  const CHART_STYLES = ['classic', 'minimal', 'bold', 'compact']
+const chartStyle = CHART_STYLES[Math.floor(Math.random() * CHART_STYLES.length)]
+const strokeWidth = chartStyle === 'bold' ? 1.4 : chartStyle === 'minimal' ? 0.6 : 0.9
+const ringGap = chartStyle === 'compact' ? 3 : 6
+  
   // Zodiac ring
   const zodSVG = ZODIAC_ORDER.map(sign => {
     const se=SIGN_BASE_DEGS[sign.toLowerCase()]
@@ -761,7 +766,7 @@ function buildBirthChartHTML(prompt) {
     const stroke=el==='Fire'?T.zodiacFireS:el==='Earth'?T.zodiacEarthS:el==='Air'?T.zodiacAirS:T.zodiacWaterS
     const d=arc(svgB,svgA,R_OUT,R_ZIN,cx,cy)
     const mp=polar(svgM,(R_OUT+R_ZIN)/2,cx,cy)
-    return `<path d="${d}" fill="${fill}" stroke="${stroke}" stroke-width="0.9"/>
+    return `<path d="${d}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}"/>
 <text x="${mp.x.toFixed(2)}" y="${mp.y.toFixed(2)}" text-anchor="middle" dominant-baseline="middle" fill="${T.signTextColor}" font-size="16" font-family="serif">${SIGN_GLYPHS[sign]}</text>`
   }).join('\n')
 
@@ -1113,10 +1118,58 @@ function getRandomVariants() {
 }
 
 function buildSystemPrompt(gradient, includeGlass, includeVisualization, includeImages, prompt) {
+
   const { nudge, typo, shape, palette } = getRandomVariants()
 
-  // Detect explicit color intent in non-glass, non-birth-chart prompts
   const lower = prompt.toLowerCase()
+
+  // ─── Request type detectors ───────────────────────────────────────────────
+
+  const isDatingProfile =
+    lower.includes('dating') || lower.includes('hinge') || lower.includes('tinder') ||
+    lower.includes('bumble') || lower.includes('dating profile') || lower.includes('match') ||
+    lower.includes('swipe') || lower.includes('profile card') && (lower.includes('age') || lower.includes('bio'))
+
+  const isSocialCard =
+    lower.includes('tweet') || lower.includes('instagram') || lower.includes('post card') ||
+    lower.includes('social media') || lower.includes('feed') || lower.includes('story card') ||
+    lower.includes('linkedin post') || lower.includes('facebook')
+
+  const isTableOrGrid =
+    lower.includes('table') || lower.includes('data grid') || lower.includes('spreadsheet') ||
+    lower.includes('leaderboard') || lower.includes('comparison table') || lower.includes('pricing table')
+
+  const isNavOrHeader =
+    lower.includes('navbar') || lower.includes('navigation') || lower.includes('header') ||
+    lower.includes('top bar') || lower.includes('menu bar') || lower.includes('sidebar')
+
+  const isTimeline =
+    lower.includes('timeline') || lower.includes('activity feed') || lower.includes('history log') ||
+    lower.includes('event log') || lower.includes('changelog') || lower.includes('steps')
+
+  const isKanban =
+    lower.includes('kanban') || lower.includes('task board') || lower.includes('trello') ||
+    lower.includes('columns') && lower.includes('cards') || lower.includes('drag')
+
+  const isMediaPlayer =
+    lower.includes('music player') || lower.includes('audio player') || lower.includes('video player') ||
+    lower.includes('podcast') || lower.includes('now playing') || lower.includes('playlist')
+
+  const isEcommerce =
+    lower.includes('product card') || lower.includes('shop') || lower.includes('cart') ||
+    lower.includes('checkout') || lower.includes('ecommerce') || lower.includes('store') ||
+    lower.includes('add to cart') || lower.includes('buy now')
+
+  const isRecipeCard =
+    lower.includes('recipe') || lower.includes('ingredients') || lower.includes('cooking') ||
+    lower.includes('meal') || lower.includes('food card')
+
+  const isCalendar =
+    lower.includes('calendar') || lower.includes('scheduler') || lower.includes('booking') ||
+    lower.includes('availability') || lower.includes('date picker')
+
+  // ─── Color detection ──────────────────────────────────────────────────────
+
   const hasExplicitColor = Object.keys(COLOR_MAP).some(c => lower.includes(c)) ||
     lower.includes('dark') || lower.includes('light') || lower.includes('black') ||
     lower.includes('white') || lower.includes('red') || lower.includes('blue') ||
@@ -1134,6 +1187,8 @@ COLOR PALETTE FOR THIS GENERATION:
 - Border: ${palette.border}
 Use these exact colors. They ensure visual variety between generations.
 `
+
+  // ─── Glass section ────────────────────────────────────────────────────────
 
   const glassSection = includeGlass ? `
 GLASSMORPHISM — FOLLOW EXACTLY:
@@ -1184,6 +1239,162 @@ ${paletteSection}
 - Single card: center with display:flex;justify-content:center;align-items:flex-start;width:100%;padding:48px;
 - Text on dark bg must be light. Text on light bg must be dark. NEVER invisible text.
 `
+
+  // ─── NEW: Dating profile section ──────────────────────────────────────────
+
+  const datingSection = isDatingProfile ? `
+DATING PROFILE CARD RULES:
+You are building a dating app profile card in the style of Hinge, Tinder, or Bumble.
+
+PHOTO:
+- Always show a large profile photo at the top using https://i.pravatar.cc/300?img= followed by a number 1-70
+- Photo must fill the full card width, height 280-320px, object-fit:cover, border-radius on top corners only (e.g. border-radius:20px 20px 0 0)
+- If multiple people are shown, use a different ?img= number for each
+
+PROFILE INFO:
+- Name (large, bold, 22-26px) + Age on the same line
+- Location with a small pin icon (use a unicode ● or 📍 only if emojis are enabled, otherwise a small dot)
+- Short bio or tagline in muted text below
+
+PROMPT + ANSWER BLOCKS (Hinge style):
+- Show 2-3 prompt blocks. Each has: a question label in small muted uppercase text, and a larger answer below it
+- Example questions: "The way to win me over is...", "My love language is...", "The most spontaneous thing I've done...", "I'm looking for...", "A green flag I look for...", "My ideal Sunday is...", "I'll know it's time to delete this app when..."
+- Each block has a subtle border, rounded corners (12px), padding 16px, background slightly offset from card
+
+INTEREST TAGS:
+- Show 3-6 interest tags as small pill-shaped badges (border-radius:20px, padding:6px 14px, font-size:12px)
+- Examples: Hiking, Coffee, Vinyl Records, Dog Parent, Homebody, Foodie
+
+ACTION BUTTONS:
+- Row of action buttons at bottom: X (pass) on left, Heart (like) on right
+- X button: light grey background, dark icon
+- Heart button: accent color background (pink, red, or gradient), white icon
+- Buttons are circles, 52px diameter, centered icons
+
+CARD DIMENSIONS:
+- max-width:380px, use rounded corners 20px, shadow, centered on page
+- Card feels like a real mobile app card — compact, scrollable content, no wasted space
+` : ''
+
+  // ─── NEW: Social media card section ──────────────────────────────────────
+
+  const socialSection = isSocialCard ? `
+SOCIAL MEDIA CARD RULES:
+- Match the visual style of the requested platform (Twitter/X = dark or light minimal; Instagram = colorful, image-forward; LinkedIn = professional blue/white)
+- Always include: avatar (pravatar), username, handle or tagline, timestamp, post content
+- Twitter/X cards: show like count, retweet count, reply count as small icon+number rows at bottom
+- Instagram cards: show image area (picsum), likes, comment count, action icons (heart, comment, share, bookmark)
+- LinkedIn cards: professional header, company/role subtitle, engagement bar
+- Content should look real and populated — no lorem ipsum
+` : ''
+
+  // ─── NEW: Table and data grid section ─────────────────────────────────────
+
+  const tableSection = isTableOrGrid ? `
+TABLE AND DATA GRID RULES:
+- Use a real <table> element with <thead> and <tbody>
+- Header row: slightly darker background, bold text, uppercase small labels
+- Alternating row backgrounds for readability (zebra striping)
+- All cells: padding 12px 16px, border-bottom on rows only (no grid lines)
+- Numbers: right-aligned, monospace font
+- Status badges in cells: use small colored pill badges (border-radius:12px, padding:3px 10px)
+- Table must be horizontally scrollable on small containers: wrap in div with overflow-x:auto
+- Include a table header/title above with optional search input or filter row
+` : ''
+
+  // ─── NEW: Navigation and header section ──────────────────────────────────
+
+  const navSection = isNavOrHeader ? `
+NAVIGATION / HEADER RULES:
+- Full-width header bar, height 60-72px, sticky or fixed if specified
+- Logo on left (text-based or icon+text), nav links in center or right
+- Active link has accent underline or background highlight
+- Mobile hamburger icon on right (show as ☰ unicode, no JS needed for display)
+- Include a CTA button (e.g. "Sign Up", "Get Started") on far right if it fits the context
+- Sidebar nav: full-height left panel, 240-260px wide, icons + labels per item, active state with accent background
+` : ''
+
+  // ─── NEW: Timeline section ────────────────────────────────────────────────
+
+  const timelineSection = isTimeline ? `
+TIMELINE / ACTIVITY FEED RULES:
+- Use a vertical left-border line as the timeline spine (2px, accent color)
+- Each item: dot on the spine line, content block to the right
+- Dot: 10-12px circle, filled with accent color, aligned to spine
+- Content block: title bold, subtitle muted, timestamp small and right-aligned or below title
+- Alternate subtle background on every other item for readability
+- Show at least 4-5 timeline entries
+- Most recent at top unless specified otherwise
+` : ''
+
+  // ─── NEW: Kanban board section ────────────────────────────────────────────
+
+  const kanbanSection = isKanban ? `
+KANBAN BOARD RULES:
+- Display 3-4 columns side by side: e.g. To Do, In Progress, Review, Done
+- Each column: header with label + item count badge, scrollable card list below
+- Column cards: white/light surface, subtle shadow, border-radius 10px, padding 14px
+- Card contents: title, optional tag/label pill, optional avatar, optional due date
+- Column headers: bold label + small count badge in accent color
+- Columns use display:flex;flex-direction:column;gap:12px
+- Overall layout: display:flex;flex-direction:row;gap:20px;overflow-x:auto
+` : ''
+
+  // ─── NEW: Media player section ────────────────────────────────────────────
+
+  const mediaSection = isMediaPlayer ? `
+MEDIA PLAYER RULES:
+- Show album art or thumbnail as a square image (picsum, 200-240px)
+- Track title bold, artist name muted below
+- Progress bar: full-width, thin (4-6px height), with filled portion in accent color, rounded ends, clickable appearance
+- Time stamps: current time left, total duration right, below progress bar
+- Control buttons row: previous ⏮, play/pause ▶ (larger, 48px circle), next ⏭ — centered
+- Secondary controls: shuffle, repeat, volume icon — smaller, muted color
+- Visualizer bars or waveform optional — use simple CSS rectangles of varying heights if included
+` : ''
+
+  // ─── NEW: E-commerce section ──────────────────────────────────────────────
+
+  const ecommerceSection = isEcommerce ? `
+E-COMMERCE COMPONENT RULES:
+- Product image: full-width or left column, use picsum with product-related seed keyword
+- Price: large and bold, show original + sale price if discounted (strikethrough on original)
+- Add to Cart button: full-width or prominent, accent background, high contrast text
+- Product rating: show as ★ characters + numeric score + review count
+- Stock status: "In Stock" in green, "Low Stock" in amber, "Out of Stock" in red
+- Size/variant selectors: show as clickable pill buttons with selected state
+- Wishlist heart icon: top-right of image, subtle
+- Shipping info: small muted text below price
+` : ''
+
+  // ─── NEW: Recipe card section ─────────────────────────────────────────────
+
+  const recipeSection = isRecipeCard ? `
+RECIPE CARD RULES:
+- Hero food photo at top (picsum with food-related seed)
+- Recipe title bold and large, short description below
+- Meta row: prep time, cook time, servings — icons or small labels, displayed inline
+- Ingredients list: clean unordered list, checkbox-style bullets, grouped if needed
+- Instructions: numbered list, each step clearly separated with generous spacing
+- Tags: dietary labels like Vegan, Gluten-Free, Quick as small colored pills
+- Difficulty badge: Easy/Medium/Hard in accent color
+` : ''
+
+  // ─── NEW: Calendar and scheduler section ─────────────────────────────────
+
+  const calendarSection = isCalendar ? `
+CALENDAR / SCHEDULER RULES:
+- Month grid layout: 7 columns (Sun-Sat), 5-6 rows of date cells
+- Header: month + year, prev/next arrow buttons
+- Today's date: highlighted with accent background circle
+- Events on dates: small colored dot or pill below the number
+- Date cells: equal size, min 40x40px, hover state with light background
+- Time slot scheduler: left column of times (9am-6pm), right area of event blocks
+- Booked slots: colored block with event title, duration-proportional height
+- Available slots: light dashed border, clickable appearance
+` : ''
+
+  // ─── Existing sections ────────────────────────────────────────────────────
 
   const imageSection = includeImages ? `
 IMAGES:
@@ -1250,6 +1461,16 @@ AVATARS: If the prompt mentions avatar, profile photo, profile picture, headshot
 JAVASCRIPT: Single script at bottom. Unique ids on interactive elements.
 BANNED: writing-mode, text-orientation, transform:rotate on text, vertical text of any kind.
 
+${datingSection}
+${socialSection}
+${tableSection}
+${navSection}
+${timelineSection}
+${kanbanSection}
+${mediaSection}
+${ecommerceSection}
+${recipeSection}
+${calendarSection}
 ${imageSection}
 ${visualizationSection}
 ${glassSection}`
