@@ -1192,26 +1192,27 @@ ${leader}
         <div class="bc-tt-pos"  id="bcTipPos"></div>
         <div class="bc-tt-sub"  id="bcTipSub"></div>
       </div>
-      <svg viewBox="${-OFFSET} ${-OFFSET} ${VSIZE} ${VSIZE}" width="${VSIZE}" height="${VSIZE}" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <radialGradient id="bcBg" cx="50%" cy="50%" r="50%">
-            <stop offset="0%"   stop-color="${T.svgBgInner}"/>
-            <stop offset="100%" stop-color="${T.svgBgOuter}"/>
-          </radialGradient>
-        </defs>
-        <circle cx="${cx}" cy="${cy}" r="${R_OUT+55}" fill="url(#bcBg)"/>
-        ${zodSVG}
-${tickSVG}
-${spokeSVG}
-${houseBandSVG}
-<circle cx="${cx}" cy="${cy}" r="${R_HOU_I-1}" fill="${T.innerCircle}" opacity="0.96"/>
-${houseNumberSVG}
-${aspectSVG.join('\n')}
-${axesSVG}
-${innerSVG}
-${outerSVG}
-        <circle cx="${cx}" cy="${cy}" r="3.5" fill="${T.centerDot}"/>
-      </svg>
+      <svg viewBox="${-OFFSET} ${-OFFSET} ${VSIZE} ${VSIZE}" ...>
+  <!-- 1. Deep background -->
+  <circle cx="${cx}" cy="${cy}" r="${R_OUT+55}" fill="${T.bg}"/>
+
+  <!-- 2. The Rings -->
+  ${zodSVG}
+  ${tickSVG}
+  ${spokeSVG}
+  ${houseBandSVG}
+
+  <!-- 3. The Inner Circle - The "Seal" -->
+  <circle cx="${cx}" cy="${cy}" r="${R_HOU_I}" fill="${T.innerCircle}" stroke="${T.innerCircle}" stroke-width="8"/>
+
+  <!-- 4. Everything else -->
+  ${houseNumberSVG}
+  ${aspectSVG.join('\n')}
+  ${axesSVG}
+  ${innerSVG}
+  ${outerSVG}
+  <circle cx="${cx}" cy="${cy}" r="3.5" fill="${T.centerDot}"/>
+</svg>
     </div>
     <div class="bc-legend">
       <p class="bc-legend-title">Planetary Positions</p>
