@@ -772,14 +772,13 @@ function buildBirthChartHTML(prompt) {
   // and would be upside-down on the left half.
   // Fix for left half: add 180° so text always reads left-to-right.
   function textRotation(svgAngle) {
-    const a = ((svgAngle % 360) + 360) % 360
-    // right half and top/bottom: 315–360 and 0–135 reads correctly with just `a`
-    // left half: 135–315 needs 180° flip
-    if (a > 135 && a < 315) {
-      return a + 180  // flip so text doesn't read upside-down
-    }
-    return a
+  const a = ((svgAngle % 360) + 360) % 360
+  // Left half of chart (90°–270°) needs 180° flip so text reads correctly
+  if (a > 90 && a <= 270) {
+    return a + 180
   }
+  return a
+}
 
    // ─── Sign label renderer ──────────────────────────────────────────────────
   function renderSignLabel(sign, midR, svgMidAngle) {
