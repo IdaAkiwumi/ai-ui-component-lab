@@ -898,8 +898,7 @@ ${renderSignLabel(sign, midR, svgM)}`
         y1="${p1.y.toFixed(2)}"
         x2="${p2.x.toFixed(2)}"
         y2="${p2.y.toFixed(2)}"
-        stroke="${T.tickColor}${isAng ? 0.8 : 0.25})"
-        stroke-width="${isAng ? 2 : 0.8}"
+      
       />
     `
   }).join('\n')
