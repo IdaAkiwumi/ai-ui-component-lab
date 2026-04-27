@@ -851,11 +851,18 @@ ${renderSignLabel(sign, midR, svgM)}`
     : ''
 
   // ─── Sign boundary spokes ─────────────────────────────────────────────────
-  const spokeSVG = ZODIAC_ORDER.map(sign => {
+ const spokeSVG = ZODIAC_ORDER.map(sign => {
     const sv = e2s(SIGN_BASE_DEGS[sign.toLowerCase()], ASC)
-    const p1 = polar(sv, R_ZIN,   cx, cy)
+    const p1 = polar(sv, R_ZIN, cx, cy)
     const p2 = polar(sv, R_HOU_I, cx, cy)
-    return `<line x1="${p1.x.toFixed(2)}" y1="${p1.y.toFixed(2)}" x2="${p2.x.toFixed(2)}" y2="${p2.y.toFixed(2)}" stroke="${T.dividerColor}" stroke-width="0.7"/>`
+    return `<line
+      x1="${p1.x.toFixed(2)}"
+      y1="${p1.y.toFixed(2)}"
+      x2="${p2.x.toFixed(2)}"
+      y2="${p2.y.toFixed(2)}"
+      stroke="${T.dividerColor}"
+      stroke-width="0.7"
+    />`
   }).join('\n')
 
   // ─── House ring — house number fix ────────────────────────────────────────
@@ -866,77 +873,112 @@ ${renderSignLabel(sign, midR, svgM)}`
   // So the arc goes from svgN clockwise to svgC.
   // Midpoint = svgN + half of that clockwise span.
  const houseBandSVG = houseCusps.map((cuspEcl, i) => {
-  const nextEcl = houseCusps[(i + 1) % 12]
+    const nextEcl = houseCusps[(i + 1) % 12]
 
-  const svgStart = e2s(cuspEcl, ASC)
-  const svgEnd = e2s(nextEcl, ASC)
+    const svgStart = e2s(cuspEcl, ASC)
+    const svgEnd = e2s(nextEcl, ASC)
 
-  const d = arc(svgStart, svgEnd, R_HOU_O, R_HOU_I, cx, cy)
-  const isAng = i === 0 || i === 3 || i === 6 || i === 9
+    const d = arc(svgStart, svgEnd, R_HOU_O, R_HOU_I, cx, cy)
+    const isAng = i === 0 || i === 3 || i === 6 || i === 9
 
-  const p1 = polar(svgStart, R_HOU_O, cx, cy)
-  const p2 = polar(svgStart, R_ASP - 6, cx, cy)
+    const p1 = polar(svgStart, R_HOU_O, cx, cy)
 
-  return `
-    <path
-      d="${d}"
-      fill="${i % 2 === 0 ? T.houseEven : T.houseOdd}"
-      stroke="${T.tickColor}0.06)"
-      stroke-width="0.4"
-    />
-    <line
-      x1="${p1.x.toFixed(2)}"
-      y1="${p1.y.toFixed(2)}"
-      x2="${p2.x.toFixed(2)}"
-      y2="${p2.y.toFixed(2)}"
-      stroke="${T.tickColor}${isAng ? 0.8 : 0.25})"
-      stroke-width="${isAng ? 2 : 0.8}"
-    />
-  `
-}).join('\n')
+    // stop house cusp divider lines before the center / aspect area
+    const p2 = polar(svgStart, R_PLN + 10, cx, cy)
+
+    return `
+      <path
+        d="${d}"
+        fill="${i % 2 === 0 ? T.houseEven : T.houseOdd}"
+        stroke="${T.tickColor}0.06)"
+        stroke-width="0.4"
+      />
+      <line
+        x1="${p1.x.toFixed(2)}"
+        y1="${p1.y.toFixed(2)}"
+        x2="${p2.x.toFixed(2)}"
+        y2="${p2.y.toFixed(2)}"
+        stroke="${T.tickColor}${isAng ? 0.8 : 0.25})"
+        stroke-width="${isAng ? 2 : 0.8}"
+      />
+    `
+  }).join('\n')
 
 
 
 
-const houseNumberSVG = houseCusps.map((cuspEcl, i) => {
-  const nextEcl = houseCusps[(i + 1) % 12]
+ const houseNumberSVG = houseCusps.map((cuspEcl, i) => {
+    const nextEcl = houseCusps[(i + 1) % 12]
 
-  let nextForMid = nextEcl
-  while (nextForMid <= cuspEcl) nextForMid += 360
-  const midEcl = (cuspEcl + (nextForMid - cuspEcl) / 2) % 360
+    let nextForMid = nextEcl
+    while (nextForMid <= cuspEcl) nextForMid += 360
+    const midEcl = (cuspEcl + (nextForMid - cuspEcl) / 2) % 360
 
-  const svgMid = e2s(midEcl, ASC)
-  const numR = R_HOU_I + (R_HOU_O - R_HOU_I) * 0.68
-  const mp = polar(svgMid, numR, cx, cy)
+    const svgMid = e2s(midEcl, ASC)
+    const numR = R_HOU_I + (R_HOU_O - R_HOU_I) * 0.68
+    const mp = polar(svgMid, numR, cx, cy)
 
-  return showHouseNums ? `
-    <text
-      x="${mp.x.toFixed(2)}"
-      y="${mp.y.toFixed(2)}"
-      text-anchor="middle"
-      dominant-baseline="middle"
-      fill="${T.isDark ? '#cbd5e1' : '#334155'}"
-      font-size="11"
-      font-family="sans-serif"
-      font-weight="700"
-      pointer-events="none"
-     >${i + 1}</text>
-  ` : ''
-}).join('\n')
+    return showHouseNums ? `
+      <text
+        x="${mp.x.toFixed(2)}"
+        y="${mp.y.toFixed(2)}"
+        text-anchor="middle"
+        dominant-baseline="middle"
+        fill="${T.isDark ? '#cbd5e1' : '#334155'}"
+        font-size="11"
+        font-family="sans-serif"
+        font-weight="700"
+        pointer-events="none"
+      >${i + 1}</text>
+    ` : ''
+  }).join('\n')
+
+  // ─── AC / DC / MC / IC axis labels + optional short lines ────────────────
+  const showAxisLines = Math.random() > 0.45
 
   // ─── Axis lines ───────────────────────────────────────────────────────────
-  const axesSVG = [
-    { ecl: ASC,               label: 'AC' },
+   const axesSVG = [
+    { ecl: ASC, label: 'AC' },
     { ecl: (ASC + 180) % 360, label: 'DC' },
-    { ecl: MC,                label: 'MC' },
-    { ecl: (MC  + 180) % 360, label: 'IC' },
+    { ecl: MC, label: 'MC' },
+    { ecl: (MC + 180) % 360, label: 'IC' },
   ].map(({ ecl, label }) => {
     const sv = e2s(ecl, ASC)
-    const p1 = polar(sv, R_HOU_O,      cx, cy)
-    const p2 = polar(sv, 8,            cx, cy)
+
+    // line starts at outer edge of house ring
+    const p1 = polar(sv, R_HOU_O, cx, cy)
+
+    // line stops near inner edge of house ring, NOT in the center
+    const p2 = polar(sv, R_HOU_I - 4, cx, cy)
+
+    // label sits just inside the house band
     const lp = polar(sv, R_HOU_I - 14, cx, cy)
-    return `<line x1="${p1.x.toFixed(2)}" y1="${p1.y.toFixed(2)}" x2="${p2.x.toFixed(2)}" y2="${p2.y.toFixed(2)}" stroke="${T.axisLineColor}" stroke-width="${SV.axisWeight}"/>
-<text x="${lp.x.toFixed(2)}" y="${lp.y.toFixed(2)}" text-anchor="middle" dominant-baseline="middle" fill="${T.axisLabelColor}" font-size="9" font-weight="700" font-family="sans-serif">${label}</text>`
+
+    const lineTag = showAxisLines ? `
+      <line
+        x1="${p1.x.toFixed(2)}"
+        y1="${p1.y.toFixed(2)}"
+        x2="${p2.x.toFixed(2)}"
+        y2="${p2.y.toFixed(2)}"
+        stroke="${T.axisLineColor}"
+        stroke-width="${SV.axisWeight}"
+        stroke-linecap="round"
+      />
+    ` : ''
+
+    return `
+      ${lineTag}
+      <text
+        x="${lp.x.toFixed(2)}"
+        y="${lp.y.toFixed(2)}"
+        text-anchor="middle"
+        dominant-baseline="middle"
+        fill="${T.axisLabelColor}"
+        font-size="9"
+        font-weight="700"
+        font-family="sans-serif"
+      >${label}</text>
+    `
   }).join('\n')
 
   // ─── Planet separation ────────────────────────────────────────────────────
